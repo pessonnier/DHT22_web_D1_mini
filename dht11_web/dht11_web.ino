@@ -10,7 +10,7 @@ const char* ssid = "Livebox-B7B0";
 const char* password = "pTXMsVp3CGZiQj6tJy";
  
 #define DHTPIN D3     // what pin we're connected to
-#define DHTTYPE DHT22 //DHT11   // DHT 11
+#define DHTTYPE DHT11 //DHT11 ou DHT22
 #define ADR_I2C_SSD1306 0x3C
 #define position "Chambre"
 
@@ -112,14 +112,15 @@ void setup()
   Serial.println("Server started");
  
   // Print the IP address
-  Serial.print("Use this URL : ");
+  Serial.print("URL : ");
   Serial.print("http://");
   ip = iptoString(WiFi.localIP());
   Serial.print(ip);
   Serial.println("/");
-  
-  maj_capteurs()
-  maj_display()
+
+  display.begin(SSD1306_SWITCHCAPVCC, ADR_I2C_SSD1306);
+  maj_capteurs();
+  maj_display();
   Serial.println("setup ok");
 }
 
@@ -151,18 +152,18 @@ void loop()
 
   testdrawchar();
  
-  Serial.printf("new client %d.%d.%d.%d:%d <-> %d.%d.%d.%d:%d\n", 
-    client.remoteIP()[0],
-    client.remoteIP()[1],
-    client.remoteIP()[2],
-    client.remoteIP()[3],
-    client.remotePort(),
-    client.localIP()[0],
-    client.localIP()[1],
-    client.localIP()[2],
-    client.localIP()[3],
-    client.localPort());
-  Serial.printf("t = %d\n",mil);
+//  Serial.printf("new client %d.%d.%d.%d:%d <-> %d.%d.%d.%d:%d\n", 
+//    client.remoteIP()[0],
+//    client.remoteIP()[1],
+//    client.remoteIP()[2],
+//    client.remoteIP()[3],
+//    client.remotePort(),
+//    client.localIP()[0],
+//    client.localIP()[1],
+//    client.localIP()[2],
+//    client.localIP()[3],
+//    client.localPort());
+//  Serial.printf("t = %d\n",mil);
 
 //  Serial.printf("new client %s:%d <-> %s:%d\n", 
 //    iptoString(client.remoteIP()),
@@ -182,7 +183,7 @@ void loop()
     delay(10);
   }
 
-  // Jeter le reste de la Requete HTTP à la poubelle
+// Jeter le reste de la Requete HTTP à la poubelle
 //  char c;
 //  while( client.available() ){
 //    c = client.read();
@@ -191,8 +192,8 @@ void loop()
   // Read the first line of the request
   String request = client.readStringUntil('\r');
   Serial.println(request);
-  cpt++;
-  Serial.printf("it : %d \n", cpt);
+  //cpt++;
+  //Serial.printf("it : %d \n", cpt);
   client.flush(); // ? ca fait quoi
  
   // Return the response
@@ -225,5 +226,5 @@ void loop()
   client.print(reponse);
   client.flush();
   delay(100);
-  Serial.println("Client disconnected");
+  //Serial.println("Client disconnected");
 }
