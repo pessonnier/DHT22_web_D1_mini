@@ -7,7 +7,7 @@
 #include <Adafruit_SSD1306.h>
  
 const char* ssid = "Livebox-B7B0";
-const char* password = "pTXMsVp3CGZiQj6tJy";
+const char* password = "...";
  
 #define DHTPIN D3     // what pin we're connected to
 #define DHTTYPE DHT11 //DHT11 ou DHT22
