@@ -207,22 +207,14 @@ void loop()
   + "<meta content=\"text/html; charset=utf-8\">\n"
   + "<title>ESP8266 " + position + "</title>\n"
   + "<br />\n"
-  + position + " <br />\n";
-
- 
-  reponse += "Temp&eacute;rature (C): ";
-  reponse += temp;
-  reponse += "\n";
-  reponse += "<br />\n";
-  reponse += "Humidit&eacute;e (%): ";
-  reponse += hum;
-  reponse += "\n";
-  reponse += "<br />\n";
-  reponse += "duree : ";
-  reponse += millis();
-  reponse += "\n";
-  reponse += "<br />\n";
-  reponse += "</html>\n";
+  + position + " <br />\n"
+  + "Temp&eacute;rature (C): " + temp + "\n"
+  + "<br />\n"
+  + "Humidit&eacute;e (%): " + hum + "\n"
+  + "<br />\n"
+  + "duree : " + millis() + "\n"
+  + "<br />\n"
+  + "</html>\n";
   client.print(reponse);
   client.flush();
   delay(100);
