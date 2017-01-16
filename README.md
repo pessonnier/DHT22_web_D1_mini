@@ -9,4 +9,6 @@ Besoin de conseils pour limiter la consomation energétique.
  - arduino ide : https://www.arduino.cc/en/Main/Software
  - Dans la case "Additional Boards Manager URLs", entrez l'adresse suivante : http://arduino.esp8266.com/staging/package_esp8266com_index.json
  - installer esp8266 dans le gestionnaire de cartes
+ - installer les lib adafruit : dht, sensor, 1306
+ - modifier Adafruit_SSD1306.h pour décomenter la bonne dimension en pixel
 pour les ESP "brut" sans usb voir http://www.fais-le-toi-meme.fr/fr/electronique/tutoriel/programmes-arduino-executes-sur-esp8266-arduino-ide
