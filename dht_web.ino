@@ -9,6 +9,7 @@
 const char* ssid = "Livebox-B7B0";
 const char* password = "...";
 const char* nom_capteur [2] = {"chambre", "fenetre"};
+const char* appurl = "https://script.google.com/macros/s/.../exec";
 
 #define DHT1PIN D3     // pate vers le data du DHT
 #define DHT2PIN D5     // pate vers le data du DHT
@@ -35,6 +36,10 @@ long intervale_disp = 5000;
 long t0_disp = 0;
 
 String ip = "0";
+
+void parametre (char* param, char* capteur, float temperature, float humidite) {
+
+}
 
 void testdrawchar(void) {
   Serial.println("table de char");
