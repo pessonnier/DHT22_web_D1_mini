@@ -11,7 +11,7 @@
 
 const char* ssid = "Livebox-B7B0";
 const char* password = "...";
-const char* nom_capteur [2] = {"portail", "garage"}; //{"chambre", "fenetre"}; //
+const char* nom_capteur [2] = {"chambre", "radiateur"}; //{"portail", "garage"}; //{"chambre", "fenetre"}; //
 
 #define DHT1PIN D3     // pate vers le data du DHT
 #define DHT2PIN D5     // pate vers le data du DHT
@@ -44,7 +44,7 @@ const char* path = "/macros/s/.../exec";
 const char* host = "script.google.com";
 const char* googleRedirHost = "script.googleusercontent.com";
 const int port = 443;
-HTTPSRedirect client(port);
+HTTPSRedirect google(port);
 
 String ip = "0";
 
@@ -115,80 +115,99 @@ void maj_display()
 
 void maj_capteurs()
 {
+  DHT tdht [2] = {dht1,dht2};
+  
+  for (int i=0;i<2;i++) {
+    temp[i] = tdht[i].readTemperature();
+    hum[i] = tdht[i].readHumidity();
+    float f = tdht[i].readTemperature(true);
+    if (isnan(hum[i]) || isnan(temp[i]) || isnan(f)) 
+    {
+      Serial.printf("echec lecture capteur %d\n", i);
+      temp[i] = 0.0;
+      hum[i] = 0.0;
+      return;
+    }
+  }
+}
+
+void maj_capteurs_temporise()
+{
   if (t1-t0_cap > intervale_cap)
   {
     //Serial.println("maj capteur");
     t0_cap += intervale_cap;
     mil = millis();
 
-    temp[0] = dht1.readTemperature();
-    hum[0] = dht1.readHumidity();
-    float f = dht1.readTemperature(true);
-    if (isnan(hum[0]) || isnan(temp[0]) || isnan(f)) 
-    {
-      temp[0] = 0;
-      hum[0] = 0;
-      return;
-    }
-
-    temp[1] = dht2.readTemperature();
-    hum[1] = dht2.readHumidity();
-    f = dht2.readTemperature(true);
-    if (isnan(hum[1]) || isnan(temp[1]) || isnan(f)) 
-    {
-      temp[1] = 0;
-      hum[1] = 0;
-      return;
-    }
+    maj_capteurs();
   }
 }
 
 void add_ligne (String req) {
   Serial.println(req);
-  client.printRedir(req, host, googleRedirHost); 
+  google.printRedir(req, host, googleRedirHost);
+  Serial.println("lecture reponse");
   // reponse ignoree
-  cpt = 0;
-  while (client.connected()) {
-    cpt++;
-    if (cpt > 1000) {
-      Serial.println("1000 lignes");
-      break;
-    }
-    String line = client.readStringUntil('\n');
-    if (!line) {
-      Serial.println("pas de line");
-      break;
-    }
-    Serial.println(line);
-    if (line.length() < 2) {
-      break;
-    }
+//  cpt = 0;
+//  while (google.connected()) {
+//    cpt++;
+//    if (cpt > 1000) { // pas plus de 1000 lignes lues
+//      Serial.println("1000 lignes");
+//      break;
+//    }
+//    String line = google.readStringUntil('\n');
+//    if (!line) {
+//      Serial.println("pas de line");
+//      break;
+//    }
+//    Serial.println(line);
+    //if (line.length() < 2) {
+    //if (line == "\r") { // fin de l'entete
+    //  break;
+    //}
+//  }
+//  Serial.println("reponse lu");
+}
+
+void maj_tableau_temporise() {
+  if (t1-t0_tab > intervale_tab) {
+    t0_tab += intervale_tab;
+    maj_tableau();
   }
-  Serial.println("reponse lu");
 }
 
 void maj_tableau() {
-  if (t1-t0_tab > intervale_tab) {
-    int cpt = 0;
-    while (!client.connected() && cpt < 5) {
-      client.connect(host, port);
-      Serial.println("connection failed");
-      Serial.printf("tentative %d\n", cpt);
-      cpt++;
-    }
-    if (!client.connected()) { return; }
-    
-    t0_tab += intervale_tab;
-    String req=String(path) + "?" + parametre(nom_capteur[0],temp[0],hum[0]);
+  int cpt = 0;
+  while ((!google.connected()) && (cpt < 5)) {
+    google.connect(host, port);
+    Serial.println("connection failed");
+    Serial.printf("tentative %d\n", cpt);
+    cpt++;
+  }
+  if (!google.connected()) { return; } // pas de mesure envoyée sur cette période
+
+  for(int i = 0; i < 2; i++) {
+    String req=String(path) + "?" + parametre(nom_capteur[i],temp[i],hum[i]);
     add_ligne(req);
-    req=String(path) + "?" + parametre(nom_capteur[1],temp[1],hum[1]);
-    add_ligne(req);
+    delay(1000); // pour tester
   }
 }
 
 void setup() 
 {
   Serial.begin(115200);
+  
+  // capteur et ecran
+  dht1.begin(); 
+  dht2.begin(); 
+  display.begin(SSD1306_SWITCHCAPVCC, ADR_I2C_SSD1306);
+  Serial.println("test hum = 0");
+  while ((hum[0] == 0.0) && (hum[1] == 0.0)) {
+    Serial.println("hum = 0");
+    maj_capteurs();
+    maj_display();
+    delay(200);
+  }
   
   // Connect to WiFi network
   Serial.print("Connecting to ");
@@ -211,14 +230,9 @@ void setup()
   Serial.print(ip);
   Serial.println("/");
 
-  // capteur et ecran
-  dht1.begin(); 
-  dht2.begin(); 
-  display.begin(SSD1306_SWITCHCAPVCC, ADR_I2C_SSD1306);
-  //while ((temp[0] == 0.0) && (hum[0] == 0.0)) {
-    maj_capteurs();
-    maj_display();
-  //}
+  // première mesure sauvegardée
+  maj_tableau();
+  
   Serial.println("setup ok");
 }
 
@@ -239,13 +253,13 @@ void loop()
 {
   //Serial.println("loop");
   t1 = millis();
-  maj_capteurs();
+  maj_capteurs_temporise();
   
   // OLED
   maj_display();
 
   // upload
-  maj_tableau();
+  maj_tableau_temporise();
   
   // Check if a client has connected
   WiFiClient client = server.available();
