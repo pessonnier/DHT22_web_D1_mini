@@ -27,3 +27,4 @@ pour les ESP "brut" sans usb voir http://www.fais-le-toi-meme.fr/fr/electronique
 # evolutions
  - Google credentials
  - server.on()
+ - lire un am2320 https://github.com/Gozem/am2320/blob/master/am2320.py
