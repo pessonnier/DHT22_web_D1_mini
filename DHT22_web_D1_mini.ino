@@ -8,27 +8,33 @@
 //#include <WiFiClientSecure.h>
 //#include <WiFiClient.h>
 #include "HTTPSRedirect.h"
+#include <ESP8266WebServer.h>
+
+// protocole bonjour d'apple
+//#include <ESP8266mDNS.h>
+//MDNSResponder mdns;
 
 const char* ssid = "Livebox-B7B0";
 const char* password = "...";
-const char* nom_capteur [2] = {"chambre", "radiateur"}; //{"portail", "garage"}; //{"chambre", "fenetre"}; //
+const char* nom_capteur [2] = {"portail", "garage"}; //{"portail", "garage"}; //{"chambre", "radiateur"}; //
 
 #define DHT1PIN D3     // pate vers le data du DHT
 #define DHT2PIN D5     // pate vers le data du DHT
+#define ALIMDHTPIN D6     // alimentation du DHT2
 #define DHTTYPE DHT22 // modèle DHT11 ou DHT22
 #define ADR_I2C_SSD1306 0x3C // adresse I2C de l'écran OLED
 #define position "Chambre" // titre de la page web
 
 DHT dht1(DHT1PIN, DHTTYPE);
 DHT dht2(DHT2PIN, DHTTYPE);
-WiFiServer server(80);
+ESP8266WebServer server(80);
 
 int cpt = 0;
 int capteur = 0;
 float temp [2] = {0.0,0.0};
 float hum [2] = {0.0,0.0};
 long mil = millis();
-long intervale_cap = 15000;
+long intervale_cap = 5000;
 long t0_cap = 0;
 long t1 = millis();
 
@@ -126,7 +132,7 @@ void maj_capteurs()
       Serial.printf("echec lecture capteur %d\n", i);
       temp[i] = 0.0;
       hum[i] = 0.0;
-      return;
+      break;
     }
   }
 }
@@ -147,26 +153,6 @@ void add_ligne (String req) {
   Serial.println(req);
   google.printRedir(req, host, googleRedirHost);
   Serial.println("lecture reponse");
-  // reponse ignoree
-//  cpt = 0;
-//  while (google.connected()) {
-//    cpt++;
-//    if (cpt > 1000) { // pas plus de 1000 lignes lues
-//      Serial.println("1000 lignes");
-//      break;
-//    }
-//    String line = google.readStringUntil('\n');
-//    if (!line) {
-//      Serial.println("pas de line");
-//      break;
-//    }
-//    Serial.println(line);
-    //if (line.length() < 2) {
-    //if (line == "\r") { // fin de l'entete
-    //  break;
-    //}
-//  }
-//  Serial.println("reponse lu");
 }
 
 void maj_tableau_temporise() {
@@ -193,33 +179,142 @@ void maj_tableau() {
   }
 }
 
+String reset() {
+  return affichePage();
+}
+
+void reinitialisecapteur() {
+  digitalWrite(ALIMDHTPIN, LOW);
+  Serial.println("reset");
+  delay(500);
+  digitalWrite(ALIMDHTPIN, HIGH);
+  delay(500);
+  maj_capteurs();
+  maj_display();
+}
+
+String affichePage() {
+  // Return the response
+  String reponse = String("HTTP/1.1 200 OK\n")
+  + "Content-Type: text/html\n"
+  + "Connnection: close\n"
+  + "\n"
+  + "<!DOCTYPE HTML>\n"
+  + "<html>\n"
+  //+ "<meta http-equiv=\"refresh\" content=\"30\">\n" // rafraichir la page
+  + "<meta content=\"text/html; charset=utf-8\">\n"
+  + "<title>ESP8266 " + position + "</title>\n"
+  + "<br />\n"
+  + nom_capteur[0] + " <br />\n"
+  + "Temp&eacute;rature (C): " + temp[0] + "\n"
+  + "<br />\n"
+  + "Humidit&eacute;e (%): " + hum[0] + "\n"
+  + "<br />\n"
+  + nom_capteur[1] + " <br />\n"
+  + "Temp&eacute;rature (C): " + temp[1] + "\n"
+  + "<br />\n"
+  + "Humidit&eacute;e (%): " + hum[1] + "\n"
+  + "<br />\n"
+  + "duree : " + millis() + "\n"
+  + "<br />\n"
+  + "</html>\n";
+  return reponse;
+}
+
+String info(){
+  String reponse = String("info : \n<br />")
+  + "\n<br />Vcc :" + ESP.getVcc()
+  + "\n<br />Free Heap :" + ESP.getFreeHeap()
+  + "\n<br />Frequence :" + ESP.getCpuFreqMHz()
+  + "\n<br />taille du code :" + ESP.getSketchSize()
+  //+ "\n<br />signature du ode :" + ESP.getSketchMD5()
+  + "\n<br />cycle : " + ESP.getCycleCount() +"\n";
+  return reponse;
+}
+
+void connexion() {
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.println();
+    // Connect to WiFi network
+    Serial.print("Connecting to ");
+    Serial.println(ssid);
+    WiFi.begin(ssid, password);
+    int t_wifi = millis();
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+      if (millis() - t_wifi > 20000) {break;}
+    }
+  }
+  Serial.println("WiFi connected");
+}
+
+void alu() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+  digitalWrite(LED_BUILTIN, HIGH);
+}
+
 void setup() 
 {
   Serial.begin(115200);
+
+  connexion();
   
+  // alim du capteur
+  pinMode(ALIMDHTPIN, OUTPUT);
+  digitalWrite(ALIMDHTPIN,HIGH);
+
   // capteur et ecran
   dht1.begin(); 
   dht2.begin(); 
   display.begin(SSD1306_SWITCHCAPVCC, ADR_I2C_SSD1306);
   Serial.println("test hum = 0");
-  while ((hum[0] == 0.0) && (hum[1] == 0.0)) {
+
+  int cptlectureinitiale = 0;
+  while (((hum[0] == 0.0) && (hum[1] == 0.0)) && cptlectureinitiale < 10) {
+    cptlectureinitiale++;
     Serial.println("hum = 0");
     maj_capteurs();
     maj_display();
     delay(200);
   }
-  
-  // Connect to WiFi network
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
- 
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("WiFi connected");
 
+// bonjour
+//  if (mdns.begin("esp8266", WiFi.localIP())) {
+//    Serial.println("MDNS responder started");
+//  }
+
+  // services
+  server.on("/", [](){
+    testdrawchar();
+    server.send(200, "text/html", affichePage());
+  });
+  server.on("/reset", [](){
+    digitalWrite(LED_BUILTIN, LOW); // tension inversée pour un esp8266 donc allume
+    reinitialisecapteur();
+    server.send(200, "text/html", reset());
+    digitalWrite(LED_BUILTIN, HIGH);
+  });
+  server.onNotFound([](){
+    server.send(404, "text/html", "Command Not Found");
+  });
+  server.on("/restart",[](){
+    server.send(200, "text/html", "reboot");
+    ESP.restart();
+  });
+  server.on("/softrset",[](){
+    server.send(200, "text/html", "reset");
+    ESP.reset();
+  });
+  server.on("/info",[](){
+    server.send(200, "text/html", info());
+  });
   server.begin();
   Serial.println("Server started");
  
@@ -233,6 +328,7 @@ void setup()
   // première mesure sauvegardée
   maj_tableau();
   
+  alu();
   Serial.println("setup ok");
 }
 
@@ -260,64 +356,7 @@ void loop()
 
   // upload
   maj_tableau_temporise();
-  
-  // Check if a client has connected
-  WiFiClient client = server.available();
-  if (!client) {
-    return;
-  }
 
-  testdrawchar();
- 
-  long t0_client = millis();
-  while(!client.available()){
-    //Serial.println("client casse");
-    if (millis()-t0_client > 2000)
-    {
-      Serial.println("client timeout");
-      //delay(2000);
-      return;
-    }
-    delay(10);
-  }
-
-// Jeter le reste de la Requete HTTP à la poubelle
-//  char c;
-//  while( client.available() ){
-//    c = client.read();
-//  }
-    
-  // Read the first line of the request
-  String request = client.readStringUntil('\r');
-  Serial.println(request);
-  client.flush(); // ? ca fait quoi
- 
-  // Return the response
-  String reponse = String("HTTP/1.1 200 OK\n")
-  + "Content-Type: text/html\n"
-  + "Connnection: close\n"
-  + "\n"
-  + "<!DOCTYPE HTML>\n"
-  + "<html>\n"
-  //+ "<meta http-equiv=\"refresh\" content=\"30\">\n" // rafraichir la page
-  + "<meta content=\"text/html; charset=utf-8\">\n"
-  + "<title>ESP8266 " + position + "</title>\n"
-  + "<br />\n"
-  + nom_capteur[0] + " <br />\n"
-  + "Temp&eacute;rature (C): " + temp[0] + "\n"
-  + "<br />\n"
-  + "Humidit&eacute;e (%): " + hum[0] + "\n"
-  + "<br />\n"
-  + nom_capteur[1] + " <br />\n"
-  + "Temp&eacute;rature (C): " + temp[1] + "\n"
-  + "<br />\n"
-  + "Humidit&eacute;e (%): " + hum[1] + "\n"
-  + "<br />\n"
-  + "duree : " + millis() + "\n"
-  + "<br />\n"
-  + "</html>\n";
-  client.print(reponse);
-  client.flush();
+  server.handleClient();
   delay(100);
-  //Serial.println("Client disconnected");
 }
