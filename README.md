@@ -19,7 +19,6 @@ pour les ESP "brut" sans usb voir http://www.fais-le-toi-meme.fr/fr/electronique
 ## les API a avoir en tete
  - https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WiFi/src/WiFiClientSecure.cpp
  - https://github.com/esp8266/Arduino/blob/master/cores/esp8266/Esp.h
- - voir server.on()
  
 ## bon exemple de code
  - https://github.com/electronicsguy/ESP8266 : fourni HTTPSRedirect 
@@ -28,3 +27,4 @@ pour les ESP "brut" sans usb voir http://www.fais-le-toi-meme.fr/fr/electronique
 # evolutions
  - Google credentials
  - lire un am2320 https://github.com/Gozem/am2320/blob/master/am2320.py
+ - voir le code de client.stop()
