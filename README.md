@@ -28,3 +28,4 @@ pour les ESP "brut" sans usb voir http://www.fais-le-toi-meme.fr/fr/electronique
  - Google credentials
  - lire un am2320 https://github.com/Gozem/am2320/blob/master/am2320.py
  - voir le code de client.stop()
+ - ajouter une URL pour forcer un upload des mesures
